@@ -1,0 +1,4 @@
+# Printable cards: build output, and they hold titles (the repo is public).
+print/
+__pycache__/
+.claude/settings.local.json
