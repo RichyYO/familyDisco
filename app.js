@@ -160,6 +160,17 @@ async function confirmPlaying(deviceId, track) {
   return state ?? {};
 }
 
+// Can this account play the track in its country? (A track ID from another market's release
+// is accepted by /play and then loads nothing.)
+async function trackDiag(track) {
+  try {
+    const r = await api('GET', `/tracks/${track}?market=from_token`);
+    if (!r.ok) return 'track lookup ' + r.status;
+    const t = await r.json();
+    return `track playable=${t.is_playable}${t.restrictions?.reason ? ' (' + t.restrictions.reason + ')' : ''}`;
+  } catch { return 'track lookup failed'; }
+}
+
 // One line for a bug report. Never names our track (that would spoil the card).
 function playDiag(steps, state, deviceId, track) {
   const where = !state.device ? 'no player' : state.device.id === deviceId ? 'this phone' : `"${state.device.name}"`;
@@ -353,6 +364,7 @@ async function play() {
     }
     if (state) {
       store.del('ss_device'); // re-pick next time in case the remembered device is the wrong one
+      steps.push(await trackDiag(current.spotify));
       throw new UserError(`Sent the song to "${dev.name}" but it didn't start. ` +
         'Open Spotify on this phone, play any song for a second, then try again. ' +
         playDiag(steps, state, dev.id, current.spotify), 'nodevice');
