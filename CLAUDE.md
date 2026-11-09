@@ -39,6 +39,8 @@ Parked: in-app reveal, catalog updates, offline, scoring, public release.
   new_page(), so pages are re-fetched via doc[i].
 - app.js: screens signin → scan → ready → countdown → playing; errors via UserError(kind).
   Classic script, so functions are globals and can be driven from the console for tests.
+  index.html loads `app.js?v=N`: bump N on every app.js change (Pages caches 10 min; a stale
+  app.js under a fresh index.html cost a phone test on 2026-11-09).
 
 ## Known issues / untested (needs a real phone)
 - No sound (2026-11-09): /play 204, phone ends "paused, no track". Ruled out: device pick, page

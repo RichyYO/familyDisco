@@ -13,7 +13,7 @@
     font:18px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   section { min-height:100%; display:flex; flex-direction:column; align-items:center;
     justify-content:center; gap:20px; padding:24px 16px; text-align:center; }
-  section[hidden] { display:none; }
+  [hidden] { display:none !important; }
   h1 { margin:0; font-size:28px; letter-spacing:.02em; }
   p { margin:0; max-width:28em; }
   .dim { color:var(--dim); font-size:15px; }
@@ -81,6 +81,8 @@
   </div>
 </section>
 
-<script src="app.js"></script>
+<!-- Bump ?v= whenever app.js changes: Pages lets browsers cache it for 10 min, and a fresh
+     index.html with a stale app.js gives buttons without handlers. -->
+<script src="app.js?v=7"></script>
 </body>
 </html>
