@@ -16,6 +16,13 @@ Dropped 2026-11-09 (Red): YouTube Music + iPhone Shortcut. Spotify only; SHORTCU
 `youtube` column deleted (git history has them). Every card now needs a Spotify ID.
 Parked: in-app reveal, catalog updates, offline, scoring, public release.
 
+Next session (Red, 2026-11-09):
+1. Settings screen: countdown length (seconds) and beeps on/off. Per-phone, so localStorage.
+2. A working copy with YouTube Premium: same page, open the card's YouTube Music link instead
+   of Spotify (the 2026-11-08 iPhone test showed a music.youtube.com link autoplays). Needs the
+   CSV `youtube` column back (see git history, commit 039fffb). Decide first: Spotify or YouTube
+   per deck, per phone setting, or a separate copy of the page.
+
 ## Decisions (beyond the spec)
 - Countdown = the spec's beep per second: the phone is face down, so the screen can't be seen.
 - Blank CSV card numbers are assigned and written back into the CSV, so reruns never renumber printed cards.
@@ -40,6 +47,8 @@ Parked: in-app reveal, catalog updates, offline, scoring, public release.
   Printed QR codes decoded from the PDF: all 10 map to the right deck entries.
   Tapping a `spotify:track:` or open.spotify.com link from Firefox opens Spotify and the song
   starts by itself (after accepting "always open in app").
+- 2026-11-09 Android (Firefox), commit eb80a77: scan → Play → beeps → Spotify opens and the song
+  starts by itself, 3 s after the tap. Full round works.
 
 ## Architecture
 - tools/make_cards.py: CSV → decks/<deck>.json (IDs only) + print/cards-<deck>.pdf. Validates all
@@ -51,5 +60,4 @@ Parked: in-app reveal, catalog updates, offline, scoring, public release.
   app.js under a fresh index.html cost a phone test on 2026-11-09).
 
 ## Known issues / untested (needs a real phone)
-- Opening Spotify from the page 3 s after the tap (no fresh tap): untested on the phone.
 - Untested: iPhone Safari with the page, BarcodeDetector path, Spotify Free accounts.
