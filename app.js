@@ -146,16 +146,25 @@ async function findPhone() {
 }
 
 // A 2xx from /play only means Spotify accepted the request, not that the device obeyed.
-// Poll the player state; returns null when playing on `deviceId`, else what Spotify reports.
-async function confirmPlaying(deviceId) {
+// Poll the player state; returns null once `track` plays on `deviceId`, else the last state seen
+// ({} when Spotify reports no player at all).
+const isTrack = (item, track) => item?.id === track || item?.linked_from?.id === track;
+async function confirmPlaying(deviceId, track) {
   let state = null;
   for (let i = 0; i < 8; i++) {
     await sleep(500);
-    const r = await api('GET', '/me/player');
+    const r = await api('GET', '/me/player?market=from_token');
     state = r.status === 200 ? await r.json() : null;
-    if (state?.is_playing && state.device?.id === deviceId) return null;
+    if (state?.is_playing && state.device?.id === deviceId && isTrack(state.item, track)) return null;
   }
   return state ?? {};
+}
+
+// One line for a bug report. Never names our track (that would spoil the card).
+function playDiag(steps, state, deviceId, track) {
+  const where = !state.device ? 'no player' : state.device.id === deviceId ? 'this phone' : `"${state.device.name}"`;
+  const what = !state.item ? 'no track' : isTrack(state.item, track) ? 'our track' : 'another track';
+  return `[${steps.join(', ')}; then ${state.is_playing ? 'playing' : 'paused'} on ${where}, ${what}]`;
 }
 
 // ---- Deck lookup ----------------------------------------------------------
@@ -318,22 +327,24 @@ async function play() {
   try { audio ??= new AudioContext(); audio.resume(); } catch { audio = null; }
   try {
     const dev = await findPhone();
+    const steps = [dev.is_active ? 'active' : 'idle'];
     // An idle device often accepts /play and does nothing; making it active first wakes it.
     if (!dev.is_active) {
       const t = await api('PUT', '/me/player', { device_ids: [dev.id], play: false });
+      steps.push('transfer ' + t.status);
       if (!t.ok) throw await apiError(t);
     }
     await countdown();
     const r = await api('PUT', `/me/player/play?device_id=${encodeURIComponent(dev.id)}`,
       { uris: ['spotify:track:' + current.spotify] });
+    steps.push('play ' + r.status);
     if (!r.ok) throw await apiError(r);
-    const state = await confirmPlaying(dev.id);
+    const state = await confirmPlaying(dev.id, current.spotify);
     if (state) {
       store.del('ss_device'); // re-pick next time in case the remembered device is the wrong one
-      const where = state.device?.name && state.device.id !== dev.id
-        ? ` Spotify says it's on "${state.device.name}".` : '';
-      throw new UserError(`Sent the song to "${dev.name}" but it didn't start.${where} ` +
-        'Open Spotify on this phone, play any song for a second, then try again.', 'nodevice');
+      throw new UserError(`Sent the song to "${dev.name}" but it didn't start. ` +
+        'Open Spotify on this phone, play any song for a second, then try again. ' +
+        playDiag(steps, state, dev.id, current.spotify), 'nodevice');
     }
     $('#playing-on').textContent = 'on ' + dev.name;
     show('playing');
