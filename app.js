@@ -4,7 +4,7 @@
 
 // ---- Config ---------------------------------------------------------------
 // Spotify app Client ID (developer.spotify.com/dashboard). Public by design with PKCE.
-const SPOTIFY_CLIENT_ID = '13b34033ce7b4962841393ddfc2f3064';
+const SPOTIFY_CLIENT_ID = '0e226cbadc4d44b4a415ea8a01d5f571';
 const COUNTDOWN_SECONDS = 3;
 // QR fallback for browsers without BarcodeDetector. Pinned + SRI; only loaded when needed.
 const JSQR_URL = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
