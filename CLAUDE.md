@@ -28,7 +28,9 @@ Parked: iPhone+Spotify, Android+YouTube, in-app reveal, catalog updates, offline
 
 ## Playtest log
 - 2026-11-08 iPhone: music.youtube.com link from Notes autoplays (spec step 1 passed).
-- 2026-11-09 Android: Spotify sign-in OK after creating the app; scanning PDF cards OK; no sound.
+- 2026-11-09 Android (Firefox): Spotify sign-in OK after creating the app; scanning PDF cards OK; no sound.
+  /play 204 but player ends "paused, no track". Private Session off. Track IDs all valid. PC web
+  player → phone Connect works. Spotify login fails in the Claude browser pane (can't test from PC).
 
 ## Architecture
 - tools/make_cards.py: CSV → decks/<deck>.json (IDs only) + print/cards-<deck>.pdf. Validates all
@@ -39,7 +41,9 @@ Parked: iPhone+Spotify, Android+YouTube, in-app reveal, catalog updates, offline
 
 ## Known issues / untested (needs a real phone)
 - Android: scan works, but the first real game showed "Playing" with no sound (2026-11-09). Fix (wake the
-  idle device, then poll /me/player to confirm) is untested on the phone.
+  idle device, then poll /me/player to confirm) didn't help. Current guess: page audio holds Android
+  audio focus → AudioContext closed before /play, plus one retry. `#silent` URL hash skips beeps
+  (debug switch: delete once the cause is known).
 - Visible iPhone countdown: whoever watches it sees the title when YouTube Music opens.
 - Show Notification banners while the Shortcut runs: unverified on device.
 - BarcodeDetector path, `spotify:` button from Chrome, 10-min idle device check: unverified.

@@ -323,11 +323,12 @@ async function play() {
   if (playing || !current) return;
   playing = true;
   $('#play-btn').disabled = true;
-  // Web Audio must start inside the tap.
-  try { audio ??= new AudioContext(); audio.resume(); } catch { audio = null; }
+  // Web Audio must start inside the tap. #silent skips the beeps (debug: does page audio block Spotify?).
+  const silent = location.hash === '#silent';
+  if (!silent) try { audio ??= new AudioContext(); audio.resume(); } catch { audio = null; }
   try {
     const dev = await findPhone();
-    const steps = [dev.is_active ? 'active' : 'idle'];
+    const steps = [silent ? 'silent' : 'beeps', dev.is_active ? 'active' : 'idle'];
     // An idle device often accepts /play and does nothing; making it active first wakes it.
     if (!dev.is_active) {
       const t = await api('PUT', '/me/player', { device_ids: [dev.id], play: false });
@@ -335,11 +336,21 @@ async function play() {
       if (!t.ok) throw await apiError(t);
     }
     await countdown();
-    const r = await api('PUT', `/me/player/play?device_id=${encodeURIComponent(dev.id)}`,
-      { uris: ['spotify:track:' + current.spotify] });
-    steps.push('play ' + r.status);
-    if (!r.ok) throw await apiError(r);
-    const state = await confirmPlaying(dev.id, current.spotify);
+    // Release the page's audio so the browser drops Android audio focus before Spotify needs it.
+    if (audio) {
+      try { await audio.close(); } catch { /* already closed */ }
+      audio = null;
+      await sleep(500);
+    }
+    let state = null;
+    for (const attempt of ['play', 'retry']) {
+      const r = await api('PUT', `/me/player/play?device_id=${encodeURIComponent(dev.id)}`,
+        { uris: ['spotify:track:' + current.spotify] });
+      steps.push(`${attempt} ${r.status}`);
+      if (!r.ok) throw await apiError(r);
+      state = await confirmPlaying(dev.id, current.spotify);
+      if (!state) break;
+    }
     if (state) {
       store.del('ss_device'); // re-pick next time in case the remembered device is the wrong one
       throw new UserError(`Sent the song to "${dev.name}" but it didn't start. ` +
