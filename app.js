@@ -1,181 +1,33 @@
 'use strict';
-// SongScan Android page: scan a card, count down, tell the phone's Spotify app to play it.
+// SongScan: scan a card, count down, open the song in the phone's Spotify app.
 // The page never knows a title: deck files hold only IDs.
+//
+// Why a link and not the Spotify Web API: in Nov 2026 Web API /play to native Spotify apps is
+// accepted (204) but not executed (github.com/encodi/sonora-mcp/issues/34; reproduced here on
+// Android). Opening spotify:track:<id> starts the song by itself, with no sign-in.
 
 // ---- Config ---------------------------------------------------------------
-// Spotify app Client ID (developer.spotify.com/dashboard). Public by design with PKCE.
-const SPOTIFY_CLIENT_ID = '0e226cbadc4d44b4a415ea8a01d5f571';
 const COUNTDOWN_SECONDS = 3;
 // QR fallback for browsers without BarcodeDetector. Pinned + SRI; only loaded when needed.
 const JSQR_URL = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
 const JSQR_SRI = 'sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx';
 
-const REDIRECT_URI = location.origin + location.pathname.replace(/index\.html$/, '');
-const SCOPES = 'user-read-playback-state user-modify-playback-state';
 const MSG = {
   notCard: 'Not a SongScan card.',
   notInDeck: 'Card not in this deck.',
   noSpotify: 'This card has no Spotify song.',
-  noDevice: 'Open Spotify, then come back.',
-  offline: 'No connection — the song can\'t play.',
-  signinAgain: 'Spotify sign-in expired. Sign in again.',
+  offline: 'No connection: can\'t load the deck.',
   camera: 'Camera blocked. Allow the camera for this site, then reload.',
-  premium: 'Spotify Premium is needed to play songs.',
-  setup: 'Setup needed: put your Spotify Client ID in app.js.',
 };
 
 // ---- Small helpers --------------------------------------------------------
 const $ = (sel) => document.querySelector(sel);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const store = {
-  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode: sign-in won't persist */ } },
-  del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
-};
-
-// kind: 'signin' -> sign-in screen, 'nodevice' -> Open Spotify fallback, otherwise plain message.
-class UserError extends Error {
-  constructor(message, kind = 'message') { super(message); this.kind = kind; }
-}
-const offline = () => new UserError(MSG.offline, 'offline');
+const songLink = (id) => 'spotify:track:' + id;
 
 function show(id) {
   for (const s of document.querySelectorAll('body > section')) s.hidden = s.id !== id;
   if (id !== 'scan') stopScanner();
-}
-
-// ---- Spotify sign-in: Authorization Code with PKCE -----------------------
-function b64url(buf) {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-async function startSignIn() {
-  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
-  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
-  const state = b64url(crypto.getRandomValues(new Uint8Array(16)));
-  store.set('ss_verifier', verifier);
-  store.set('ss_state', state);
-  const q = new URLSearchParams({
-    client_id: SPOTIFY_CLIENT_ID, response_type: 'code', redirect_uri: REDIRECT_URI,
-    code_challenge_method: 'S256', code_challenge: challenge, scope: SCOPES, state,
-  });
-  location.assign('https://accounts.spotify.com/authorize?' + q);
-}
-
-async function finishSignIn(params) {
-  history.replaceState(null, '', REDIRECT_URI);
-  const ok = params.get('code') && params.get('state') === store.get('ss_state');
-  const verifier = store.get('ss_verifier');
-  store.del('ss_state');
-  store.del('ss_verifier');
-  if (!ok || !verifier) throw new UserError('Spotify sign-in didn\'t finish. Try again.', 'signin');
-  await tokenRequest({
-    grant_type: 'authorization_code', code: params.get('code'),
-    redirect_uri: REDIRECT_URI, code_verifier: verifier,
-  });
-}
-
-async function tokenRequest(fields) {
-  let r;
-  try {
-    r = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: SPOTIFY_CLIENT_ID, ...fields }),
-    });
-  } catch { throw offline(); }
-  if (r.status === 400 || r.status === 401) { signOut(); throw new UserError(MSG.signinAgain, 'signin'); }
-  if (!r.ok) throw new UserError(`Spotify isn't answering (${r.status}). Try again.`);
-  const t = await r.json();
-  store.set('ss_access', t.access_token);
-  if (t.refresh_token) store.set('ss_refresh', t.refresh_token);
-  store.set('ss_expires', String(Date.now() + t.expires_in * 1000));
-}
-
-async function accessToken() {
-  const token = store.get('ss_access');
-  if (token && Date.now() < Number(store.get('ss_expires') || 0) - 60_000) return token;
-  const refresh = store.get('ss_refresh');
-  if (!refresh) throw new UserError('Sign in with Spotify first.', 'signin');
-  await tokenRequest({ grant_type: 'refresh_token', refresh_token: refresh });
-  return store.get('ss_access');
-}
-
-function signOut() {
-  for (const k of ['ss_access', 'ss_refresh', 'ss_expires', 'ss_device']) store.del(k);
-}
-
-// ---- Spotify Web API ------------------------------------------------------
-async function api(method, path, body, retried = false) {
-  if (!navigator.onLine) throw offline();
-  const token = await accessToken();
-  let r;
-  try {
-    r = await fetch('https://api.spotify.com/v1' + path, {
-      method,
-      headers: { Authorization: 'Bearer ' + token, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch { throw offline(); }
-  if (r.status === 401 && !retried) { store.del('ss_access'); return api(method, path, body, true); }
-  return r;
-}
-
-async function apiError(r) {
-  let reason = '';
-  try { reason = (await r.json()).error?.reason || ''; } catch { /* empty body */ }
-  if (r.status === 401) { signOut(); return new UserError(MSG.signinAgain, 'signin'); }
-  if (r.status === 404 || reason === 'NO_ACTIVE_DEVICE') return new UserError(MSG.noDevice, 'nodevice');
-  if (r.status === 403 && reason === 'PREMIUM_REQUIRED') return new UserError(MSG.premium);
-  if (r.status === 429) return new UserError('Spotify says slow down. Wait a few seconds, then try again.');
-  return new UserError(`Spotify error ${r.status}${reason ? ' (' + reason + ')' : ''}. Try again.`);
-}
-
-// This phone's Spotify app, chosen before the countdown so a missing device fails early.
-async function findPhone() {
-  const r = await api('GET', '/me/player/devices');
-  if (!r.ok) throw await apiError(r);
-  const { devices = [] } = await r.json();
-  const phones = devices.filter((d) => d.type === 'Smartphone' && !d.is_restricted);
-  const remembered = store.get('ss_device');
-  const pick = phones.find((d) => d.id === remembered) || phones.find((d) => d.is_active) || phones[0];
-  if (!pick) throw new UserError(MSG.noDevice, 'nodevice');
-  store.set('ss_device', pick.id);
-  return pick;
-}
-
-// A 2xx from /play only means Spotify accepted the request, not that the device obeyed.
-// Poll the player state; returns null once `track` plays on `deviceId`, else the last state seen
-// ({} when Spotify reports no player at all).
-const isTrack = (item, track) => item?.id === track || item?.linked_from?.id === track;
-async function confirmPlaying(deviceId, track) {
-  let state = null;
-  for (let i = 0; i < 8; i++) {
-    await sleep(500);
-    const r = await api('GET', '/me/player?market=from_token');
-    state = r.status === 200 ? await r.json() : null;
-    if (state?.is_playing && state.device?.id === deviceId && isTrack(state.item, track)) return null;
-  }
-  return state ?? {};
-}
-
-// Can this account play the track in its country? (A track ID from another market's release
-// is accepted by /play and then loads nothing.)
-async function trackDiag(track) {
-  try {
-    const r = await api('GET', `/tracks/${track}?market=from_token`);
-    if (!r.ok) return 'track lookup ' + r.status;
-    const t = await r.json();
-    return `track playable=${t.is_playable}${t.restrictions?.reason ? ' (' + t.restrictions.reason + ')' : ''}`;
-  } catch { return 'track lookup failed'; }
-}
-
-// One line for a bug report. Never names our track (that would spoil the card).
-function playDiag(steps, state, deviceId, track) {
-  const where = !state.device ? 'no player' : state.device.id === deviceId ? 'this phone' : `"${state.device.name}"`;
-  const what = !state.item ? 'no track' : isTrack(state.item, track) ? 'our track' : 'another track';
-  return `[${steps.join(', ')}; then ${state.is_playing ? 'playing' : 'paused'} on ${where}, ${what}]`;
 }
 
 // ---- Deck lookup ----------------------------------------------------------
@@ -188,9 +40,9 @@ const decks = new Map(); // cached for the session; failures are not cached
 async function lookup({ deck, card }) {
   if (!decks.has(deck)) {
     let r;
-    try { r = await fetch(`decks/${deck}.json`, { cache: 'no-cache' }); } catch { throw offline(); }
-    if (r.status === 404) throw new UserError(`Unknown deck "${deck}".`);
-    if (!r.ok) throw new UserError(`Couldn't load the deck (${r.status}).`);
+    try { r = await fetch(`decks/${deck}.json`, { cache: 'no-cache' }); } catch { throw new Error(MSG.offline); }
+    if (r.status === 404) throw new Error(`Unknown deck "${deck}".`);
+    if (!r.ok) throw new Error(`Couldn't load the deck (${r.status}).`);
     decks.set(deck, await r.json());
   }
   return decks.get(deck).cards?.[card] ?? null;
@@ -208,7 +60,7 @@ function loadScript(src, integrity) {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src; s.integrity = integrity; s.crossOrigin = 'anonymous';
-    s.onload = resolve; s.onerror = () => reject(new UserError('Couldn\'t load the QR scanner. Check the connection.'));
+    s.onload = resolve; s.onerror = () => reject(new Error('Couldn\'t load the QR scanner. Check the connection.'));
     document.head.append(s);
   });
 }
@@ -333,100 +185,31 @@ let playing = false;
 async function play() {
   if (playing || !current) return;
   playing = true;
-  $('#play-btn').disabled = true;
-  // Web Audio must start inside the tap. #silent skips the beeps (debug: does page audio block Spotify?).
-  const silent = location.hash === '#silent';
-  if (!silent) try { audio ??= new AudioContext(); audio.resume(); } catch { audio = null; }
+  // Web Audio must start inside the tap.
+  try { audio ??= new AudioContext(); audio.resume(); } catch { audio = null; }
   try {
-    const dev = await findPhone();
-    const steps = [silent ? 'silent' : 'beeps', dev.is_active ? 'active' : 'idle'];
-    // An idle device often accepts /play and does nothing; making it active first wakes it.
-    if (!dev.is_active) {
-      const t = await api('PUT', '/me/player', { device_ids: [dev.id], play: false });
-      steps.push('transfer ' + t.status);
-      if (!t.ok) throw await apiError(t);
-    }
     await countdown();
-    // Release the page's audio so the browser drops Android audio focus before Spotify needs it.
-    if (audio) {
-      try { await audio.close(); } catch { /* already closed */ }
-      audio = null;
-      await sleep(500);
-    }
-    let state = null;
-    for (const attempt of ['play', 'retry']) {
-      const r = await api('PUT', `/me/player/play?device_id=${encodeURIComponent(dev.id)}`,
-        { uris: ['spotify:track:' + current.spotify] });
-      steps.push(`${attempt} ${r.status}`);
-      if (!r.ok) throw await apiError(r);
-      state = await confirmPlaying(dev.id, current.spotify);
-      if (!state) break;
-    }
-    if (state) {
-      store.del('ss_device'); // re-pick next time in case the remembered device is the wrong one
-      steps.push(await trackDiag(current.spotify));
-      throw new UserError(`Sent the song to "${dev.name}" but it didn't start. ` +
-        'Open Spotify on this phone, play any song for a second, then try again. ' +
-        playDiag(steps, state, dev.id, current.spotify), 'nodevice');
-    }
-    $('#playing-on').textContent = 'on ' + dev.name;
+    // Release the page's audio so Spotify gets the speaker.
+    if (audio) { try { await audio.close(); } catch { /* already closed */ } audio = null; }
+    const link = songLink(current.spotify);
+    $('#replay').href = link; // fallback if the browser won't open an app this long after the tap
     show('playing');
-  } catch (e) {
-    handleError(e);
+    location.href = link;
   } finally {
     playing = false;
-    $('#play-btn').disabled = false;
   }
 }
 
-async function nextCard() {
-  $('#next-btn').disabled = true;
-  try { await api('PUT', '/me/player/pause'); } catch { /* already paused / offline: scan anyway */ }
-  $('#next-btn').disabled = false;
+function nextCard() {
   current = null;
   startScanner();
 }
 
-function handleError(e) {
-  if (!(e instanceof UserError)) e = new UserError('Something went wrong: ' + (e?.message || e));
-  if (e.kind === 'signin') {
-    $('#signin-msg').textContent = e.message;
-    show('signin');
-    return;
-  }
-  $('#error-msg').textContent = e.message;
-  $('#open-spotify').hidden = e.kind !== 'nodevice';
-  const tryApp = e.kind === 'nodevice' && current?.spotify; // debug links, see index.html
-  $('#try-app-a').hidden = $('#try-app-b').hidden = !tryApp;
-  if (tryApp) {
-    $('#try-app-a').href = 'spotify:track:' + current.spotify;
-    $('#try-app-b').href = `https://open.spotify.com/track/${current.spotify}?autoplay=true`;
-  }
-  $('#retry-btn').hidden = !current;
-  show('error');
-}
-
 // ---- Start ----------------------------------------------------------------
-async function init() {
-  $('#signin-btn').onclick = () => startSignIn().catch(handleError);
-  $('#signout-btn').onclick = () => { signOut(); $('#signin-msg').textContent = 'Signed out.'; show('signin'); };
+function init() {
   $('#play-btn').onclick = play;
   $('#cancel-btn').onclick = () => { current = null; startScanner(); };
   $('#next-btn').onclick = nextCard;
-  $('#retry-btn').onclick = () => { show('ready'); play(); };
-  $('#back-btn').onclick = () => { current = null; startScanner(); };
-
-  if (!SPOTIFY_CLIENT_ID) {
-    $('#signin-msg').textContent = MSG.setup;
-    $('#signin-btn').disabled = true;
-    show('signin');
-    return;
-  }
-  const params = new URLSearchParams(location.search);
-  if (params.has('code') || params.has('error')) {
-    try { await finishSignIn(params); } catch (e) { handleError(e); return; }
-  }
-  if (!store.get('ss_refresh')) { show('signin'); return; }
   startScanner();
 }
 

@@ -19,16 +19,15 @@ a `spotify:track:` URI or a bare ID, and every row needs one. Writes `decks/main
 Push to `github.com/RichyYO/familyDisco`, then Settings → Pages → Deploy from branch `main`,
 folder `/ (root)`. Site: https://richyyo.github.io/familyDisco/
 
-## Spotify setup (once)
+## On the phone (once)
 
-Needs Spotify **Premium** on the account that plays (and on the app owner's account).
+1. Install the Spotify app and sign in (tested with Premium).
+2. Open https://richyyo.github.io/familyDisco/ and allow the camera. Add to Home Screen.
+3. Scan a card and tap Play. When the browser asks to open Spotify, choose **Always**
+   (Firefox: "always open in app"), so later songs start without a prompt.
 
-1. https://developer.spotify.com/dashboard → Create app → tick **Web API**.
-2. Redirect URIs: `https://richyyo.github.io/familyDisco/` and, for testing on the PC,
-   `http://127.0.0.1:8000/`.
-3. User Management: add each Spotify account that will play (max five).
-4. Copy the Client ID into `SPOTIFY_CLIENT_ID` at the top of `app.js`.
-5. On the phone, open the site, sign in, allow the camera. Add to Home Screen.
+No Spotify sign-in or developer app: the page opens `spotify:track:<id>` and the Spotify app
+starts the song by itself.
 
 ## Test on the PC
 
@@ -36,5 +35,4 @@ Needs Spotify **Premium** on the account that plays (and on the app owner's acco
 python -m http.server 8000 --bind 127.0.0.1
 ```
 
-Then open http://127.0.0.1:8000/ (use `127.0.0.1`, not `localhost`: Spotify rejects
-`localhost` redirects).
+Then open http://127.0.0.1:8000/. The camera needs `127.0.0.1`/`localhost` or HTTPS.
