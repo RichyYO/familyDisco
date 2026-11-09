@@ -142,7 +142,20 @@ async function findPhone() {
   const pick = phones.find((d) => d.id === remembered) || phones.find((d) => d.is_active) || phones[0];
   if (!pick) throw new UserError(MSG.noDevice, 'nodevice');
   store.set('ss_device', pick.id);
-  return pick.id;
+  return pick;
+}
+
+// A 2xx from /play only means Spotify accepted the request, not that the device obeyed.
+// Poll the player state; returns null when playing on `deviceId`, else what Spotify reports.
+async function confirmPlaying(deviceId) {
+  let state = null;
+  for (let i = 0; i < 8; i++) {
+    await sleep(500);
+    const r = await api('GET', '/me/player');
+    state = r.status === 200 ? await r.json() : null;
+    if (state?.is_playing && state.device?.id === deviceId) return null;
+  }
+  return state ?? {};
 }
 
 // ---- Deck lookup ----------------------------------------------------------
@@ -304,11 +317,25 @@ async function play() {
   // Web Audio must start inside the tap.
   try { audio ??= new AudioContext(); audio.resume(); } catch { audio = null; }
   try {
-    const deviceId = await findPhone();
+    const dev = await findPhone();
+    // An idle device often accepts /play and does nothing; making it active first wakes it.
+    if (!dev.is_active) {
+      const t = await api('PUT', '/me/player', { device_ids: [dev.id], play: false });
+      if (!t.ok) throw await apiError(t);
+    }
     await countdown();
-    const r = await api('PUT', `/me/player/play?device_id=${encodeURIComponent(deviceId)}`,
+    const r = await api('PUT', `/me/player/play?device_id=${encodeURIComponent(dev.id)}`,
       { uris: ['spotify:track:' + current.spotify] });
     if (!r.ok) throw await apiError(r);
+    const state = await confirmPlaying(dev.id);
+    if (state) {
+      store.del('ss_device'); // re-pick next time in case the remembered device is the wrong one
+      const where = state.device?.name && state.device.id !== dev.id
+        ? ` Spotify says it's on "${state.device.name}".` : '';
+      throw new UserError(`Sent the song to "${dev.name}" but it didn't start.${where} ` +
+        'Open Spotify on this phone, play any song for a second, then try again.', 'nodevice');
+    }
+    $('#playing-on').textContent = 'on ' + dev.name;
     show('playing');
   } catch (e) {
     handleError(e);

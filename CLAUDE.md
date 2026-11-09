@@ -22,11 +22,13 @@ Parked: iPhone+Spotify, Android+YouTube, in-app reveal, catalog updates, offline
 - Generator errors (not warns) on glyphs the card font lacks; font = Windows Arial.
 - Print layout: A4, 3×4 grid of 60 mm cards, backs mirrored for long-edge duplex.
 - QR fallback = jsQR 1.4.0 from jsDelivr with SRI, loaded only without BarcodeDetector.
-- Device pick: remembered ID → active Smartphone → first Smartphone.
+- Device pick: remembered ID → active Smartphone → first Smartphone. Forgotten when playback
+  fails to start. "Playing" only after /me/player confirms that device is playing (a 2xx from /play isn't proof).
 - `print/` is gitignored (titles + build output). Not done: keeping the CSV private. songs/*.csv is public in the repo.
 
 ## Playtest log
 - 2026-11-08 iPhone: music.youtube.com link from Notes autoplays (spec step 1 passed).
+- 2026-11-09 Android: Spotify sign-in OK after creating the app; scanning PDF cards OK; no sound.
 
 ## Architecture
 - tools/make_cards.py: CSV → decks/<deck>.json (IDs only) + print/cards-<deck>.pdf. Validates all
@@ -36,7 +38,8 @@ Parked: iPhone+Spotify, Android+YouTube, in-app reveal, catalog updates, offline
   Classic script, so functions are globals and can be driven from the console for tests.
 
 ## Known issues / untested (needs a real phone)
-- SPOTIFY_CLIENT_ID in app.js is empty until the Spotify app exists.
+- Android: scan works, but the first real game showed "Playing" with no sound (2026-11-09). Fix (wake the
+  idle device, then poll /me/player to confirm) is untested on the phone.
 - Visible iPhone countdown: whoever watches it sees the title when YouTube Music opens.
 - Show Notification banners while the Shortcut runs: unverified on device.
 - BarcodeDetector path, `spotify:` button from Chrome, 10-min idle device check: unverified.
