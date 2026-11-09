@@ -42,7 +42,9 @@ Parked: in-app reveal, catalog updates, offline, scoring, public release.
 
 ## Known issues / untested (needs a real phone)
 - No sound (2026-11-09): /play 204, phone ends "paused, no track". Ruled out: device pick, page
-  audio, Private Session, Premium, card data. Next suspect: track IDs not playable in Red's market;
-  the error now reports `track playable=` from GET /tracks?market=from_token. `#silent` URL hash
-  skips beeps (debug switch: delete once the cause is known).
+  audio, Private Session, Premium, card data, market (`track playable=true`). Matches
+  github.com/encodi/sonora-mcp/issues/34 (Oct–Nov 2026, open): Web API play to native clients
+  (Android, Windows) accepted but not executed; Web Player fine. Likely Spotify-side, not ours.
+  Testing a workaround: error screen has debug links Test A (`spotify:track:`) / Test B
+  (open.spotify.com `?autoplay=true`). `#silent` hash and both links: delete once decided.
 - Untested: iPhone Safari with the page, BarcodeDetector path, `spotify:` button, 10-min idle device check.

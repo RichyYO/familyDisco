@@ -396,6 +396,12 @@ function handleError(e) {
   }
   $('#error-msg').textContent = e.message;
   $('#open-spotify').hidden = e.kind !== 'nodevice';
+  const tryApp = e.kind === 'nodevice' && current?.spotify; // debug links, see index.html
+  $('#try-app-a').hidden = $('#try-app-b').hidden = !tryApp;
+  if (tryApp) {
+    $('#try-app-a').href = 'spotify:track:' + current.spotify;
+    $('#try-app-b').href = `https://open.spotify.com/track/${current.spotify}?autoplay=true`;
+  }
   $('#retry-btn').hidden = !current;
   show('error');
 }
