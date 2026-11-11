@@ -1,5 +1,5 @@
 'use strict';
-// SongScan: scan a card, count down, open the song in the phone's Spotify app.
+// SongScan: scan a card, count down, open the song in the phone's Spotify or YouTube Music app.
 // The page never knows a title: deck files hold only IDs.
 //
 // Why a link and not the Spotify Web API: in Nov 2026 Web API /play to native Spotify apps is
@@ -11,7 +11,13 @@
 // the Play tap as recent. 3 s is confirmed on Android Firefox (2026-11-09); longer is untested.
 const SECONDS_MIN = 1;
 const SECONDS_MAX = 3;
-const DEFAULTS = { seconds: 3, beeps: true };
+const DEFAULTS = { seconds: 3, beeps: true, service: 'spotify' };
+
+// Where a card's song opens. YouTube Music links autoplay (iPhone, 2026-11-08; Android untested).
+const SERVICES = {
+  spotify: { name: 'Spotify', link: (id) => 'spotify:track:' + id },
+  youtube: { name: 'YouTube Music', link: (id) => 'https://music.youtube.com/watch?v=' + id },
+};
 const SETTINGS_KEY = 'songscan.settings';
 // QR fallback for browsers without BarcodeDetector. Pinned + SRI; only loaded when needed.
 const JSQR_URL = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
@@ -20,7 +26,7 @@ const JSQR_SRI = 'sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15
 const MSG = {
   notCard: 'Not a SongScan card.',
   notInDeck: 'Card not in this deck.',
-  noSpotify: 'This card has no Spotify song.',
+  noSong: (service) => `This card has no ${SERVICES[service].name} song.`,
   offline: 'No connection: can\'t load the deck.',
   camera: 'Camera blocked. Allow the camera for this site, then reload.',
 };
@@ -28,7 +34,6 @@ const MSG = {
 // ---- Small helpers --------------------------------------------------------
 const $ = (sel) => document.querySelector(sel);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const songLink = (id) => 'spotify:track:' + id;
 
 function show(id) {
   for (const s of document.querySelectorAll('body > section')) s.hidden = s.id !== id;
@@ -44,6 +49,7 @@ function loadSettings() {
   const n = Number(saved.seconds);
   if (Number.isInteger(n) && n >= SECONDS_MIN && n <= SECONDS_MAX) s.seconds = n;
   if (typeof saved.beeps === 'boolean') s.beeps = saved.beeps;
+  if (Object.hasOwn(SERVICES, saved.service)) s.service = saved.service;
   return s;
 }
 
@@ -57,14 +63,21 @@ function openSettings() {
   show('settings');
   for (const r of document.querySelectorAll('#settings input[name="seconds"]')) r.checked = Number(r.value) === settings.seconds;
   for (const r of document.querySelectorAll('#settings input[name="beeps"]')) r.checked = (r.value === 'on') === settings.beeps;
+  for (const r of document.querySelectorAll('#settings input[name="service"]')) r.checked = r.value === settings.service;
+}
+
+function showService() {
+  $('#service-note').textContent = `Plays each card's song in the ${SERVICES[settings.service].name} app on this phone.`;
 }
 
 function onSettingChange(e) {
   const { name, value } = e.target;
   if (name === 'seconds') settings.seconds = Number(value);
   else if (name === 'beeps') settings.beeps = value === 'on';
+  else if (name === 'service' && Object.hasOwn(SERVICES, value)) settings.service = value;
   else return;
   saveSettings();
+  showService();
 }
 
 // ---- Deck lookup ----------------------------------------------------------
@@ -174,7 +187,7 @@ function toast(msg, ms = 2500) {
 }
 
 // ---- Round ----------------------------------------------------------------
-let current = null; // { deck, card, spotify }
+let current = null; // { deck, card, link }
 let audio = null;
 
 async function onCode(text) {
@@ -187,8 +200,9 @@ async function onCode(text) {
     let card;
     try { card = await lookup(code); } catch (e) { return toast(e.message); }
     if (!card) return toast(MSG.notInDeck);
-    if (!card.spotify) return toast(MSG.noSpotify);
-    current = { ...code, spotify: card.spotify };
+    const id = card[settings.service];
+    if (!id) return toast(MSG.noSong(settings.service));
+    current = { ...code, link: SERVICES[settings.service].link(id) };
     $('#ready-card').textContent = `Card ${code.deck} · ${code.card}`;
     show('ready');
   } finally {
@@ -226,9 +240,9 @@ async function play() {
   if (settings.beeps) { try { audio ??= new AudioContext(); audio.resume(); } catch { audio = null; } }
   try {
     await countdown();
-    // Release the page's audio so Spotify gets the speaker.
+    // Release the page's audio so the music app gets the speaker.
     if (audio) { try { await audio.close(); } catch { /* already closed */ } audio = null; }
-    const link = songLink(current.spotify);
+    const link = current.link;
     $('#replay').href = link; // fallback if the browser won't open an app this long after the tap
     show('playing');
     location.href = link;
@@ -250,6 +264,7 @@ function init() {
   $('#settings-btn').onclick = openSettings;
   $('#settings').onchange = onSettingChange;
   $('#settings-done').onclick = startScanner;
+  showService();
   startScanner();
 }
 

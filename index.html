@@ -49,12 +49,19 @@
   <h1>Scan a card</h1>
   <div id="viewfinder"><video id="video" playsinline muted></video></div>
   <p id="toast" role="status"></p>
-  <p class="dim">Plays each card's song in the Spotify app on this phone.</p>
+  <p id="service-note" class="dim">Plays each card's song in the Spotify app on this phone.</p>
   <button id="settings-btn" class="secondary" type="button">Settings</button>
 </section>
 
 <section id="settings" hidden>
   <h1>Settings</h1>
+  <fieldset>
+    <legend>Plays on</legend>
+    <div class="seg">
+      <label><input type="radio" name="service" value="spotify"><span>Spotify</span></label>
+      <label><input type="radio" name="service" value="youtube"><span>YouTube Music</span></label>
+    </div>
+  </fieldset>
   <fieldset>
     <legend>Countdown</legend>
     <div class="seg">
@@ -93,6 +100,6 @@
 
 <!-- Bump ?v= whenever app.js changes: Pages lets browsers cache it for 10 min, and a fresh
      index.html with a stale app.js gives buttons without handlers. -->
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

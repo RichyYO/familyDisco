@@ -16,8 +16,7 @@ Dropped 2026-11-09 (Red): YouTube Music + iPhone Shortcut. Spotify only; SHORTCU
 `youtube` column deleted (git history has them). Every card now needs a Spotify ID.
 Parked: in-app reveal, catalog updates, offline, scoring, public release.
 
-In progress (Red, 2026-11-11): YouTube Music as a per-phone setting (Spotify or YouTube Music),
-for players with YouTube Premium. Needs the CSV `youtube` column back (commit 039fffb has it).
+YouTube Music is back (2026-11-11) as a per-phone setting, for players with YouTube Premium.
 Real deck `main` comes later; keep using `test` until then.
 
 ## Decisions (beyond the spec)
@@ -25,6 +24,9 @@ Real deck `main` comes later; keep using `test` until then.
 - Settings (per phone, localStorage `songscan.settings`): countdown 1–3 s, beeps on/off. Capped at
   3 s (Red, 2026-11-11) because the song link must open while the Play tap still counts as recent;
   3 s is the longest confirmed on a phone. Beeps off creates no AudioContext at all.
+- Service is per phone (Red, 2026-11-11), not per deck or a second page: one printed deck serves
+  both. Spotify ID stays required on every card; `youtube` is optional and the generator lists
+  cards without one. YouTube plays by opening `https://music.youtube.com/watch?v=<id>`.
 - Blank CSV card numbers are assigned and written back into the CSV, so reruns never renumber printed cards.
 - Generator errors (not warns) on glyphs the card font lacks; font = Windows Arial.
 - Print layout: A4, 3×4 grid of 60 mm cards, backs mirrored for long-edge duplex.
@@ -61,3 +63,6 @@ Real deck `main` comes later; keep using `test` until then.
 
 ## Known issues / untested (needs a real phone)
 - Untested: iPhone Safari with the page, BarcodeDetector path, Spotify Free accounts.
+- Untested on a phone: settings screen, and the YouTube Music path from this page. It's an https
+  link, so Android may load it in the browser tab instead of the app (Firefox: "Open links in
+  apps"); if so, try an `intent://…;package=com.google.android.apps.youtube.music;end` link.

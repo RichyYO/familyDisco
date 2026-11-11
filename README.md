@@ -9,8 +9,10 @@ No titles on any screen: flip the card to reveal.
 python tools/make_cards.py songs/main.csv
 ```
 
-CSV columns `card,title,artist,year,spotify`. The `spotify` column takes a track share link,
-a `spotify:track:` URI or a bare ID, and every row needs one. Writes `decks/main.json`
+CSV columns `card,title,artist,year,spotify,youtube`. The `spotify` column takes a track share
+link, a `spotify:track:` URI or a bare ID, and every row needs one. The `youtube` column takes a
+YouTube or YouTube Music video link or a bare 11-char ID, and may be blank (that card then won't
+play on a phone set to YouTube Music; the run lists those cards). Writes `decks/main.json`
 (commit it) and `print/cards-main.pdf`. Print the PDF on A4, double-sided,
 **flip on long edge**, at 100% scale (not "fit to page"). Cut along the corner marks.
 
@@ -26,7 +28,8 @@ folder `/ (root)`. Site: https://richyyo.github.io/familyDisco/
 3. Scan a card and tap Play. When the browser asks to open Spotify, choose **Always**
    (Firefox: "always open in app"), so later songs start without a prompt.
 
-**Settings** (button on the scan screen): countdown 1–3 s and beeps on/off, saved on that phone.
+**Settings** (button on the scan screen), saved on that phone: plays on Spotify or YouTube Music,
+countdown 1–3 s, beeps on/off. YouTube Music needs the YouTube Music app (Premium for no ads).
 
 No Spotify sign-in or developer app: the page opens `spotify:track:<id>` and the Spotify app
 starts the song by itself.

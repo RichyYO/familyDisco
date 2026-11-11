@@ -3,11 +3,13 @@
     python tools/make_cards.py songs/main.csv            # deck name = file name
     python tools/make_cards.py songs/x.csv --deck main   # explicit deck name
 
-CSV columns: card,title,artist,year,spotify
-- spotify takes a track share link, a spotify:track: URI or a bare 22-char ID.
+CSV columns: card,title,artist,year,spotify,youtube
+- spotify takes a track share link, a spotify:track: URI or a bare 22-char ID. Required.
+- youtube takes a YouTube / YouTube Music video link or a bare 11-char video ID. May be
+  blank: that card then can't play on a phone set to YouTube Music (the run lists them).
 - Blank card numbers are assigned (next free number) and WRITTEN BACK to the CSV,
   so a later run can never renumber an already-printed card.
-- Any error (duplicate card, missing or malformed Spotify ID, missing
+- Any error (duplicate card, missing or malformed Spotify ID, malformed YouTube ID, missing
   title/artist/year, unprintable character) stops the run before anything is written.
 
 PDF layout: A4, 3x4 grid of 60 mm cards. Every fronts page is followed by its
@@ -28,7 +30,7 @@ import qrcode
 from qrcode.constants import ERROR_CORRECT_Q
 
 ROOT = Path(__file__).resolve().parent.parent
-COLUMNS = ["card", "title", "artist", "year", "spotify"]
+COLUMNS = ["card", "title", "artist", "year", "spotify", "youtube"]
 
 MM = 72 / 25.4
 CARD = 60 * MM
@@ -45,6 +47,7 @@ FONT_CANDIDATES = [  # (regular, bold); first pair that exists wins
 ]
 
 SPOTIFY_ID = re.compile(r"^[0-9A-Za-z]{22}$")
+YOUTUBE_ID = re.compile(r"^[0-9A-Za-z_-]{11}$")
 DECK_NAME = re.compile(r"^[a-z0-9]+$")
 
 
@@ -61,6 +64,19 @@ def spotify_id(raw: str) -> str:
     cand = m.group(1) if m else raw
     if not SPOTIFY_ID.match(cand):
         raise CardError(f"spotify: not a track link or 22-char track ID: {raw!r}")
+    return cand
+
+
+def youtube_id(raw: str) -> str:
+    raw = raw.strip()
+    if not raw:
+        return ""
+    m = (re.match(r"^https?://youtu\.be/([^/?#&\s]+)", raw)
+         or re.match(r"^https?://(?:www\.|m\.|music\.)?youtube\.com/watch\?(?:.*&)?v=([^&#\s]+)", raw)
+         or re.match(r"^https?://(?:www\.|m\.|music\.)?youtube\.com/(?:shorts|embed|live)/([^/?#&\s]+)", raw))
+    cand = m.group(1) if m else raw
+    if not YOUTUBE_ID.match(cand):
+        raise CardError(f"youtube: not a video link or 11-char video ID: {raw!r}")
     return cand
 
 
@@ -98,10 +114,11 @@ def normalize(rows: list[dict], glyph_ok) -> tuple[list[dict], list[str], bool]:
                     errors.append(f"{where}: duplicate card {c} (also on line {seen[c]})")
                 seen[c] = row["_line"]
                 row["card"] = c
-        try:
-            row["spotify"] = spotify_id(row["spotify"])
-        except CardError as e:
-            errors.append(f"{where}: {e}")
+        for col, fn in (("spotify", spotify_id), ("youtube", youtube_id)):
+            try:
+                row[col] = fn(row[col])
+            except CardError as e:
+                errors.append(f"{where}: {e}")
         for col in ("title", "artist", "year"):
             if not row[col]:
                 errors.append(f"{where}: {col} is empty")
@@ -133,7 +150,12 @@ def write_csv_back(path: Path, rows: list[dict]) -> None:
 
 
 def deck_json(deck: str, rows: list[dict]) -> str:
-    cards = {row["card"]: {"spotify": row["spotify"]} for row in sorted(rows, key=lambda r: r["card"])}
+    cards = {}
+    for row in sorted(rows, key=lambda r: r["card"]):
+        entry = {"spotify": row["spotify"]}
+        if row["youtube"]:
+            entry["youtube"] = row["youtube"]
+        cards[row["card"]] = entry
     return json.dumps({"format": 1, "deck": deck, "cards": cards}, indent=2) + "\n"
 
 
@@ -262,12 +284,17 @@ def main() -> int:
     print(f"{len(rows)} cards -> {json_path.relative_to(ROOT)} and {pdf_path.relative_to(ROOT)} "
           f"({sheets} sheet(s), {2 * sheets} pages; print duplex, flip on LONG edge)")
 
-    by_id: dict[str, list[str]] = {}
-    for r in rows:
-        by_id.setdefault(r["spotify"], []).append(r["card"])
-    for sid, cards in by_id.items():
-        if len(cards) > 1:
-            print(f"Same Spotify song on cards {', '.join(cards)} ({sid})")
+    no_yt = [r["card"] for r in rows if not r["youtube"]]
+    if no_yt:
+        print(f"No YouTube ID (can't play on a phone set to YouTube Music): {', '.join(no_yt)}")
+    for col, name in (("spotify", "Spotify"), ("youtube", "YouTube")):
+        by_id: dict[str, list[str]] = {}
+        for r in rows:
+            if r[col]:
+                by_id.setdefault(r[col], []).append(r["card"])
+        for sid, cards in by_id.items():
+            if len(cards) > 1:
+                print(f"Same {name} song on cards {', '.join(cards)} ({sid})")
     return 0
 
 
