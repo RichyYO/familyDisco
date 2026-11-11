@@ -26,6 +26,8 @@ folder `/ (root)`. Site: https://richyyo.github.io/familyDisco/
 3. Scan a card and tap Play. When the browser asks to open Spotify, choose **Always**
    (Firefox: "always open in app"), so later songs start without a prompt.
 
+**Settings** (button on the scan screen): countdown 1–3 s and beeps on/off, saved on that phone.
+
 No Spotify sign-in or developer app: the page opens `spotify:track:<id>` and the Spotify app
 starts the song by itself.
 

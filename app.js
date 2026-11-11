@@ -7,7 +7,12 @@
 // Android). Opening spotify:track:<id> starts the song by itself, with no sign-in.
 
 // ---- Config ---------------------------------------------------------------
-const COUNTDOWN_SECONDS = 3;
+// Countdown is capped at 3 s: the song link opens the app only while the browser still counts
+// the Play tap as recent. 3 s is confirmed on Android Firefox (2026-11-09); longer is untested.
+const SECONDS_MIN = 1;
+const SECONDS_MAX = 3;
+const DEFAULTS = { seconds: 3, beeps: true };
+const SETTINGS_KEY = 'songscan.settings';
 // QR fallback for browsers without BarcodeDetector. Pinned + SRI; only loaded when needed.
 const JSQR_URL = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
 const JSQR_SRI = 'sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx';
@@ -28,6 +33,38 @@ const songLink = (id) => 'spotify:track:' + id;
 function show(id) {
   for (const s of document.querySelectorAll('body > section')) s.hidden = s.id !== id;
   if (id !== 'scan') stopScanner();
+}
+
+// ---- Settings (per phone, localStorage) -----------------------------------
+// Storage can be missing or throw (private mode, blocked site data): fall back to defaults.
+function loadSettings() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)) ?? {}; } catch { /* use defaults */ }
+  const s = { ...DEFAULTS };
+  const n = Number(saved.seconds);
+  if (Number.isInteger(n) && n >= SECONDS_MIN && n <= SECONDS_MAX) s.seconds = n;
+  if (typeof saved.beeps === 'boolean') s.beeps = saved.beeps;
+  return s;
+}
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* this session only */ }
+}
+
+let settings = loadSettings();
+
+function openSettings() {
+  show('settings');
+  for (const r of document.querySelectorAll('#settings input[name="seconds"]')) r.checked = Number(r.value) === settings.seconds;
+  for (const r of document.querySelectorAll('#settings input[name="beeps"]')) r.checked = (r.value === 'on') === settings.beeps;
+}
+
+function onSettingChange(e) {
+  const { name, value } = e.target;
+  if (name === 'seconds') settings.seconds = Number(value);
+  else if (name === 'beeps') settings.beeps = value === 'on';
+  else return;
+  saveSettings();
 }
 
 // ---- Deck lookup ----------------------------------------------------------
@@ -174,7 +211,7 @@ function beep(freq) {
 
 async function countdown() {
   show('countdown');
-  for (let n = COUNTDOWN_SECONDS; n >= 1; n--) {
+  for (let n = settings.seconds; n >= 1; n--) {
     $('#count').textContent = String(n);
     beep(n === 1 ? 880 : 660);
     await sleep(1000);
@@ -185,8 +222,8 @@ let playing = false;
 async function play() {
   if (playing || !current) return;
   playing = true;
-  // Web Audio must start inside the tap.
-  try { audio ??= new AudioContext(); audio.resume(); } catch { audio = null; }
+  // Web Audio must start inside the tap. No beeps: no AudioContext at all.
+  if (settings.beeps) { try { audio ??= new AudioContext(); audio.resume(); } catch { audio = null; } }
   try {
     await countdown();
     // Release the page's audio so Spotify gets the speaker.
@@ -210,6 +247,9 @@ function init() {
   $('#play-btn').onclick = play;
   $('#cancel-btn').onclick = () => { current = null; startScanner(); };
   $('#next-btn').onclick = nextCard;
+  $('#settings-btn').onclick = openSettings;
+  $('#settings').onchange = onSettingChange;
+  $('#settings-done').onclick = startScanner;
   startScanner();
 }
 

@@ -8,7 +8,7 @@ Spec: https://claude.ai/artifact/PPeqWSrTMqzjc979cComZa (its iPhone/YouTube half
 Question: can a group play a full game with home-printed cards, no ads, nobody seeing a title early?
 - Spotify page, ads seen: ___   title seen early: ___   failed cards: ___ / ___
 - Played by someone other than Red: ___
-- Timebox: none set (Red, 2026-11-08). Playbook rule 9 says set one.
+- Timebox: none. Hobby project, no deadline or verdict pressure (Red, 2026-11-11).
 
 ## Scope / Parked
 v1 = card generator, Spotify page (index.html + app.js), one deck `main`.
@@ -16,15 +16,15 @@ Dropped 2026-11-09 (Red): YouTube Music + iPhone Shortcut. Spotify only; SHORTCU
 `youtube` column deleted (git history has them). Every card now needs a Spotify ID.
 Parked: in-app reveal, catalog updates, offline, scoring, public release.
 
-Next session (Red, 2026-11-09):
-1. Settings screen: countdown length (seconds) and beeps on/off. Per-phone, so localStorage.
-2. A working copy with YouTube Premium: same page, open the card's YouTube Music link instead
-   of Spotify (the 2026-11-08 iPhone test showed a music.youtube.com link autoplays). Needs the
-   CSV `youtube` column back (see git history, commit 039fffb). Decide first: Spotify or YouTube
-   per deck, per phone setting, or a separate copy of the page.
+In progress (Red, 2026-11-11): YouTube Music as a per-phone setting (Spotify or YouTube Music),
+for players with YouTube Premium. Needs the CSV `youtube` column back (commit 039fffb has it).
+Real deck `main` comes later; keep using `test` until then.
 
 ## Decisions (beyond the spec)
 - Countdown = the spec's beep per second: the phone is face down, so the screen can't be seen.
+- Settings (per phone, localStorage `songscan.settings`): countdown 1–3 s, beeps on/off. Capped at
+  3 s (Red, 2026-11-11) because the song link must open while the Play tap still counts as recent;
+  3 s is the longest confirmed on a phone. Beeps off creates no AudioContext at all.
 - Blank CSV card numbers are assigned and written back into the CSV, so reruns never renumber printed cards.
 - Generator errors (not warns) on glyphs the card font lacks; font = Windows Arial.
 - Print layout: A4, 3×4 grid of 60 mm cards, backs mirrored for long-edge duplex.

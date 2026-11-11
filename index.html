@@ -31,6 +31,16 @@
   #viewfinder::after { content:""; position:absolute; inset:15%; border:3px solid rgba(255,255,255,.7);
     border-radius:12px; }
   #toast { min-height:1.4em; color:var(--warn); font-weight:600; }
+  #settings-btn { min-width:0; padding:10px 22px; font-size:15px; }
+  fieldset { border:0; margin:0; padding:0; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  legend { padding:0 0 10px; font-weight:700; }
+  .seg { display:flex; gap:8px; justify-content:center; }
+  .seg label { position:relative; }
+  .seg input { position:absolute; opacity:0; inset:0; margin:0; }
+  .seg span { display:block; min-width:64px; padding:12px 18px; border-radius:999px;
+    background:#2a2a2a; font-weight:700; cursor:pointer; }
+  .seg input:checked + span { background:var(--accent); color:#000; }
+  .seg input:focus-visible + span { outline:2px solid var(--fg); outline-offset:2px; }
 </style>
 </head>
 <body>
@@ -40,6 +50,28 @@
   <div id="viewfinder"><video id="video" playsinline muted></video></div>
   <p id="toast" role="status"></p>
   <p class="dim">Plays each card's song in the Spotify app on this phone.</p>
+  <button id="settings-btn" class="secondary" type="button">Settings</button>
+</section>
+
+<section id="settings" hidden>
+  <h1>Settings</h1>
+  <fieldset>
+    <legend>Countdown</legend>
+    <div class="seg">
+      <label><input type="radio" name="seconds" value="1"><span>1 s</span></label>
+      <label><input type="radio" name="seconds" value="2"><span>2 s</span></label>
+      <label><input type="radio" name="seconds" value="3"><span>3 s</span></label>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Beeps</legend>
+    <div class="seg">
+      <label><input type="radio" name="beeps" value="on"><span>On</span></label>
+      <label><input type="radio" name="beeps" value="off"><span>Off</span></label>
+    </div>
+  </fieldset>
+  <p class="dim">Saved on this phone only.</p>
+  <button id="settings-done" type="button">Done</button>
 </section>
 
 <section id="ready" hidden>
@@ -61,6 +93,6 @@
 
 <!-- Bump ?v= whenever app.js changes: Pages lets browsers cache it for 10 min, and a fresh
      index.html with a stale app.js gives buttons without handlers. -->
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
