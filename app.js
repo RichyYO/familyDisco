@@ -49,7 +49,7 @@ function loadSettings() {
   const n = Number(saved.seconds);
   if (Number.isInteger(n) && n >= SECONDS_MIN && n <= SECONDS_MAX) s.seconds = n;
   if (typeof saved.beeps === 'boolean') s.beeps = saved.beeps;
-  if (Object.hasOwn(SERVICES, saved.service)) s.service = saved.service;
+  if (SERVICES.hasOwnProperty(saved.service)) s.service = saved.service;
   return s;
 }
 
@@ -74,7 +74,7 @@ function onSettingChange(e) {
   const { name, value } = e.target;
   if (name === 'seconds') settings.seconds = Number(value);
   else if (name === 'beeps') settings.beeps = value === 'on';
-  else if (name === 'service' && Object.hasOwn(SERVICES, value)) settings.service = value;
+  else if (name === 'service' && SERVICES.hasOwnProperty(value)) settings.service = value;
   else return;
   saveSettings();
   showService();
@@ -143,35 +143,43 @@ function getDetector() {
   return detectorPromise;
 }
 
+// Each start and stop bumps scanGen. A start whose generation is no longer current (the screen
+// was left, or a newer start began, while it waited for the camera or the QR library) stops its
+// own camera and exits, so only one camera stream and one scan loop ever exist.
+let scanGen = 0;
+
 async function startScanner() {
   show('scan');
   if (stream) return;
+  const gen = ++scanGen;
   const video = $('#video');
+  let s;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
   } catch {
-    stream = null;
-    toast(MSG.camera, 0);
+    if (gen === scanGen) toast(MSG.camera, 0);
     return;
   }
-  if ($('#scan').hidden) { stopScanner(); return; } // left the screen while waiting for permission
+  if (gen !== scanGen) { for (const t of s.getTracks()) t.stop(); return; }
+  stream = s;
   video.srcObject = stream;
   try { await video.play(); } catch { /* autoplay of muted video is allowed; ignore */ }
   let detect;
-  try { detect = await getDetector(); } catch (e) { toast(e.message, 0); return; }
+  try { detect = await getDetector(); } catch (e) { if (gen === scanGen) toast(e.message, 0); return; }
   const tick = async () => {
-    if (!stream) return;
+    if (gen !== scanGen) return;
     if (!handling && video.readyState >= 2) {
       let text = null;
       try { text = await detect(video); } catch { /* bad frame */ }
-      if (text) await onCode(text);
+      if (text && gen === scanGen) await onCode(text);
     }
-    if (stream) scanTimer = setTimeout(tick, 150);
+    if (gen === scanGen) scanTimer = setTimeout(tick, 150);
   };
   tick();
 }
 
 function stopScanner() {
+  scanGen++;
   clearTimeout(scanTimer);
   if (stream) for (const t of stream.getTracks()) t.stop();
   stream = null;

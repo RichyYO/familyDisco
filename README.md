@@ -25,8 +25,8 @@ folder `/ (root)`. Site: https://richyyo.github.io/familyDisco/
 
 1. Install the Spotify app and sign in (tested with Premium).
 2. Open https://richyyo.github.io/familyDisco/ and allow the camera. Add to Home Screen.
-3. Scan a card and tap Play. When the browser asks to open Spotify, choose **Always**
-   (Firefox: "always open in app"), so later songs start without a prompt.
+3. Scan a card and tap Play. When the browser asks to open Spotify (or YouTube Music), choose
+   **Always** (Firefox: "always open in app"), so later songs start without a prompt.
 
 **Settings** (button on the scan screen), saved on that phone: plays on Spotify or YouTube Music,
 countdown 1–3 s, beeps on/off. YouTube Music needs the YouTube Music app (Premium for no ads).

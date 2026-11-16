@@ -7,6 +7,7 @@ CSV columns: card,title,artist,year,spotify,youtube
 - spotify takes a track share link, a spotify:track: URI or a bare 22-char ID. Required.
 - youtube takes a YouTube / YouTube Music video link or a bare 11-char video ID. May be
   blank: that card then can't play on a phone set to YouTube Music (the run lists them).
+  The column itself may be missing (older CSVs); it is then added, blank, on write-back.
 - Blank card numbers are assigned (next free number) and WRITTEN BACK to the CSV,
   so a later run can never renumber an already-printed card.
 - Any error (duplicate card, missing or malformed Spotify ID, malformed YouTube ID, missing
@@ -31,6 +32,7 @@ from qrcode.constants import ERROR_CORRECT_Q
 
 ROOT = Path(__file__).resolve().parent.parent
 COLUMNS = ["card", "title", "artist", "year", "spotify", "youtube"]
+OPTIONAL_COLUMNS = {"youtube"}
 
 MM = 72 / 25.4
 CARD = 60 * MM
@@ -84,7 +86,7 @@ def read_rows(path: Path) -> list[dict]:
     with path.open(newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         header = [h.strip().lower() for h in (reader.fieldnames or [])]
-        missing = [c for c in COLUMNS if c not in header]
+        missing = [c for c in COLUMNS if c not in header and c not in OPTIONAL_COLUMNS]
         if missing:
             raise SystemExit(f"ERROR {path}: missing column(s) {missing}; expected {COLUMNS}")
         reader.fieldnames = header
@@ -93,6 +95,8 @@ def read_rows(path: Path) -> list[dict]:
             row = {k: (v or "").strip() for k, v in row.items() if k}
             if not any(row.values()):
                 continue  # blank line
+            for c in OPTIONAL_COLUMNS:
+                row.setdefault(c, "")
             row["_line"] = line_no
             rows.append(row)
     return rows
