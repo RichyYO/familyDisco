@@ -13,7 +13,8 @@ const SECONDS_MIN = 1;
 const SECONDS_MAX = 3;
 const DEFAULTS = { seconds: 3, beeps: true, service: 'spotify' };
 
-// Where a card's song opens. YouTube Music links autoplay (iPhone, 2026-11-08; Android untested).
+// Where a card's song opens. YouTube Music links autoplay on iPhone (2026-11-08); on Android the
+// app opens but waited for a tap (2026-11-16, with music-video IDs; song IDs not yet retried).
 const SERVICES = {
   spotify: { name: 'Spotify', link: (id) => 'spotify:track:' + id },
   youtube: { name: 'YouTube Music', link: (id) => 'https://music.youtube.com/watch?v=' + id },

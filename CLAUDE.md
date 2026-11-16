@@ -51,6 +51,11 @@ Real deck `main` comes later; keep using `test` until then.
   starts by itself (after accepting "always open in app").
 - 2026-11-09 Android (Firefox), commit eb80a77: scan → Play → beeps → Spotify opens and the song
   starts by itself, 3 s after the tap. Full round works.
+- 2026-11-16 Android, YouTube Music setting: the app opens (not the browser tab), but on the Video
+  tab and doesn't start until tapped. All test.csv `youtube` IDs are music-video IDs, which is
+  why it lands on Video; the song (Art Track) ID is a different ID. test.csv now has song IDs
+  (music.youtube.com search → Songs filter); all 10 open on the Song tab in the PC web player, the
+  old video ID on Video. Phone retest pending.
 
 ## Architecture
 - tools/make_cards.py: CSV → decks/<deck>.json (IDs only) + print/cards-<deck>.pdf. Validates all
@@ -63,6 +68,6 @@ Real deck `main` comes later; keep using `test` until then.
 
 ## Known issues / untested (needs a real phone)
 - Untested: iPhone Safari with the page, BarcodeDetector path, Spotify Free accounts.
-- Untested on a phone: settings screen, and the YouTube Music path from this page. It's an https
-  link, so Android may load it in the browser tab instead of the app (Firefox: "Open links in
-  apps"); if so, try an `intent://…;package=com.google.android.apps.youtube.music;end` link.
+- Untested on a phone: settings screen.
+- YouTube Music on Android didn't autoplay (2026-11-16, video IDs). Retest with the song IDs;
+  if it still waits for a tap, that's the cost of the link (no YTM API to start playback).

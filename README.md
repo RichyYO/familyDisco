@@ -12,7 +12,9 @@ python tools/make_cards.py songs/main.csv
 CSV columns `card,title,artist,year,spotify,youtube`. The `spotify` column takes a track share
 link, a `spotify:track:` URI or a bare ID, and every row needs one. The `youtube` column takes a
 YouTube or YouTube Music video link or a bare 11-char ID, and may be blank (that card then won't
-play on a phone set to YouTube Music; the run lists those cards). Writes `decks/main.json`
+play on a phone set to YouTube Music; the run lists those cards). Use the **song** link, not the
+music video: on music.youtube.com take the result under "Songs" (or switch the player to the
+Song tab) and Share → Copy link. A music-video ID opens YouTube Music on the Video tab. Writes `decks/main.json`
 (commit it) and `print/cards-main.pdf`. Print the PDF on A4, double-sided,
 **flip on long edge**, at 100% scale (not "fit to page"). Cut along the corner marks.
 
