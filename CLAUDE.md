@@ -40,6 +40,12 @@ Real deck `main` comes later; keep using `test` until then.
   and "Next card" can't pause the song (the next link replaces it). Spotify dev app no longer used.
 - Playing screen keeps a "Song didn't start? Play it" link to the same track, in case the browser
   won't open an app 3 s after the tap.
+- Apple (iPhone/iPad; iPadOS by MacIntel + touch) (Red, 2026-11-17): Play is an `<a>` whose href
+  is the song, so the tap itself opens it. No countdown or beeps; settings grey them out with an
+  "Apple:" note. Safari hands youtube.com to the app only from a fresh tap; after 3 s it gives
+  Safari's page or an "Open in app?" prompt. Spotify on Apple uses open.spotify.com, because
+  app schemes (youtube://) prompted even when tapped.
+- Rejected: in-page YouTube player (iPhone: ad first every time, froze once); youtube:// links.
 - `print/` is gitignored (titles + build output). Not done: keeping the CSV private. songs/*.csv is public in the repo.
 
 ## Playtest log
@@ -63,6 +69,10 @@ Real deck `main` comes later; keep using `test` until then.
   themselves, both tapped and after 3 s. youtu.be and vnd.youtube: "other". Delay isn't the issue.
 - 2026-11-17 Android, commit 5bc1365: YouTube setting, full round works (youtube.com/watch).
   iPhone Safari: same link opens Safari's YouTube page, not autoplaying, muted.
+- 2026-11-17 iPhone (iOS 18.7, Safari), ios-test.html, two runs: youtube.com/watch tapped directly
+  opens the app and plays (run 2; run 1 got Safari's page, likely iOS stuck on "open in Safari"
+  after earlier tries). After 3 s: Safari page or "Open in app?" prompt. youtube:// always
+  prompts. In-page player: ad first every time, once stuck on a black screen. Spotify not tried.
 
 ## Architecture
 - tools/make_cards.py: CSV → decks/<deck>.json (IDs only) + print/cards-<deck>.pdf. Validates all
@@ -74,9 +84,7 @@ Real deck `main` comes later; keep using `test` until then.
   app.js under a fresh index.html cost a phone test on 2026-11-09).
 
 ## Known issues / untested (needs a real phone)
-- Untested: iPhone Safari with the page, BarcodeDetector path, Spotify Free accounts.
-- Untested on a phone: settings screen.
-- iPhone Safari (2026-11-17): youtube.com/watch after the countdown opens Safari's page, muted.
-  Likely cause: universal links only fire from a fresh tap (<~0.5 s). ios-test.html (throwaway)
-  tries app links and an in-page YouTube player, tapped vs after 3 s; Spotify on iPhone too.
-  Local preview: the YouTube player errors 150 on 127.0.0.1 but loads on localhost.
+- Untested: BarcodeDetector path, Spotify Free accounts, iPad detection.
+- Untested on a phone: settings screen, the Apple tap-to-play round in the real game, Spotify on
+  iPhone (open.spotify.com from a tap). If iOS opens YouTube links in Safari, long-press one →
+  "Open in YouTube" resets it (seen 2026-11-17 after test tries landed on Safari's page).

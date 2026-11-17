@@ -13,11 +13,20 @@ const SECONDS_MIN = 1;
 const SECONDS_MAX = 3;
 const DEFAULTS = { seconds: 3, beeps: true, service: 'spotify' };
 
+// iPhone/iPad: Safari hands a link to the app only straight from a tap (2026-11-17: youtube.com
+// tapped opens the YouTube app and plays; 3 s later gets Safari's page or an "Open in app?"
+// prompt). So on Apple, Play is the song link itself and there is no countdown. iPadOS reports
+// itself as a Mac; touch points tell them apart.
+const IS_APPLE = /iPhone|iPad|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 // Where a card's song opens. YouTube: youtube.com/watch opens the regular YouTube app and plays by
 // itself on Android, tapped or after 3 s (2026-11-17). Not music.youtube.com: Android Firefox opens
 // that as a browser tab, and it needs the separate YouTube Music app, which players don't have.
+// Spotify on Apple uses the open.spotify.com link: app schemes (youtube://) always asked
+// "Open in app?" in Safari, even tapped. Spotify on iPhone is untested.
 const SERVICES = {
-  spotify: { name: 'Spotify', link: (id) => 'spotify:track:' + id },
+  spotify: { name: 'Spotify', link: (id) => (IS_APPLE ? 'https://open.spotify.com/track/' : 'spotify:track:') + id },
   youtube: { name: 'YouTube', link: (id) => 'https://www.youtube.com/watch?v=' + id },
 };
 const SETTINGS_KEY = 'songscan.settings';
@@ -213,6 +222,7 @@ async function onCode(text) {
     const id = card[settings.service];
     if (!id) return toast(MSG.noSong(settings.service));
     current = { ...code, link: SERVICES[settings.service].link(id) };
+    $('#play-btn').href = IS_APPLE ? current.link : '#';
     $('#ready-card').textContent = `Card ${code.deck} · ${code.card}`;
     show('ready');
   } finally {
@@ -261,6 +271,19 @@ async function play() {
   }
 }
 
+// Play is a link. On Apple its href is the song and the tap itself opens it; elsewhere it runs the
+// countdown and the page opens the song.
+function onPlayTap(e) {
+  if (!current) { e.preventDefault(); return; }
+  if (IS_APPLE) {
+    $('#replay').href = current.link;
+    show('playing');
+    return; // the browser follows the link
+  }
+  e.preventDefault();
+  play();
+}
+
 function nextCard() {
   current = null;
   startScanner();
@@ -268,7 +291,12 @@ function nextCard() {
 
 // ---- Start ----------------------------------------------------------------
 function init() {
-  $('#play-btn').onclick = play;
+  $('#play-btn').onclick = onPlayTap;
+  if (IS_APPLE) {
+    $('#countdown-set').disabled = true;
+    $('#beeps-set').disabled = true;
+    $('#apple-note').hidden = false;
+  }
   $('#cancel-btn').onclick = () => { current = null; startScanner(); };
   $('#next-btn').onclick = nextCard;
   $('#settings-btn').onclick = openSettings;

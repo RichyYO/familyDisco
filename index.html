@@ -22,7 +22,10 @@
     text-decoration:none; cursor:pointer; display:inline-block; }
   button.secondary, .btn.secondary { background:#2a2a2a; color:var(--fg); }
   button:disabled { opacity:.45; }
-  #play-btn { width:min(70vw, 280px); height:min(70vw, 280px); font-size:40px; }
+  #play-btn { width:min(70vw, 280px); height:min(70vw, 280px); font-size:40px;
+    display:flex; align-items:center; justify-content:center; }
+  fieldset:disabled { opacity:.45; }
+  fieldset:disabled span { cursor:default; }
   #count { font-size:min(60vw, 320px); font-weight:800; line-height:1; }
   #scan { justify-content:flex-start; }
   #viewfinder { position:relative; width:min(92vw, 480px); aspect-ratio:1; border-radius:16px;
@@ -62,7 +65,7 @@
       <label><input type="radio" name="service" value="youtube"><span>YouTube</span></label>
     </div>
   </fieldset>
-  <fieldset>
+  <fieldset id="countdown-set">
     <legend>Countdown</legend>
     <div class="seg">
       <label><input type="radio" name="seconds" value="1"><span>1 s</span></label>
@@ -70,20 +73,22 @@
       <label><input type="radio" name="seconds" value="3"><span>3 s</span></label>
     </div>
   </fieldset>
-  <fieldset>
+  <fieldset id="beeps-set">
     <legend>Beeps</legend>
     <div class="seg">
       <label><input type="radio" name="beeps" value="on"><span>On</span></label>
       <label><input type="radio" name="beeps" value="off"><span>Off</span></label>
     </div>
   </fieldset>
+  <p id="apple-note" class="dim" hidden>Apple: the song opens the moment you tap Play, so there is no
+    countdown or beeps. iPhones only open the music app straight from a tap.</p>
   <p class="dim">Saved on this phone only.</p>
   <button id="settings-done" type="button">Done</button>
 </section>
 
 <section id="ready" hidden>
   <p id="ready-card" class="dim"></p>
-  <button id="play-btn" type="button">Play</button>
+  <a id="play-btn" class="btn" href="#" role="button">Play</a>
   <p class="dim">Tap Play, then turn the phone face down.</p>
   <button id="cancel-btn" class="secondary" type="button">Scan another card</button>
 </section>
@@ -100,6 +105,6 @@
 
 <!-- Bump ?v= whenever app.js changes: Pages lets browsers cache it for 10 min, and a fresh
      index.html with a stale app.js gives buttons without handlers. -->
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

@@ -31,6 +31,10 @@ folder `/ (root)`. Site: https://richyyo.github.io/familyDisco/
 **Settings** (button on the scan screen), saved on that phone: plays on Spotify or YouTube,
 countdown 1–3 s, beeps on/off. YouTube plays in the regular YouTube app (Premium for no ads).
 
+**iPhone/iPad:** the song opens the moment you tap Play, with no countdown or beeps (Safari only
+opens the music app straight from a tap). If YouTube songs open in Safari instead of the app,
+long-press any YouTube link and choose "Open in YouTube" once.
+
 No Spotify sign-in or developer app: the page opens `spotify:track:<id>` and the Spotify app
 starts the song by itself.
 
