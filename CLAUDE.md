@@ -61,6 +61,8 @@ Real deck `main` comes later; keep using `test` until then.
 - 2026-11-17 Android (Firefox 160), link test page: plain music.youtube.com (song, video, radio
   queue) now all open a browser tab. Intent pinned to the YTM app and youtube.com/watch play by
   themselves, both tapped and after 3 s. youtu.be and vnd.youtube: "other". Delay isn't the issue.
+- 2026-11-17 Android, commit 5bc1365: YouTube setting, full round works (youtube.com/watch).
+  iPhone Safari: same link opens Safari's YouTube page, not autoplaying, muted.
 
 ## Architecture
 - tools/make_cards.py: CSV → decks/<deck>.json (IDs only) + print/cards-<deck>.pdf. Validates all
@@ -74,5 +76,7 @@ Real deck `main` comes later; keep using `test` until then.
 ## Known issues / untested (needs a real phone)
 - Untested: iPhone Safari with the page, BarcodeDetector path, Spotify Free accounts.
 - Untested on a phone: settings screen.
-- Untested on a phone: YouTube from the real game flow (only the test page was tried), and
-  youtube.com/watch on iPhone.
+- iPhone Safari (2026-11-17): youtube.com/watch after the countdown opens Safari's page, muted.
+  Likely cause: universal links only fire from a fresh tap (<~0.5 s). ios-test.html (throwaway)
+  tries app links and an in-page YouTube player, tapped vs after 3 s; Spotify on iPhone too.
+  Local preview: the YouTube player errors 150 on 127.0.0.1 but loads on localhost.
