@@ -1,5 +1,5 @@
 'use strict';
-// SongScan: scan a card, count down, open the song in the phone's Spotify or YouTube Music app.
+// SongScan: scan a card, count down, open the song in the phone's Spotify or YouTube app.
 // The page never knows a title: deck files hold only IDs.
 //
 // Why a link and not the Spotify Web API: in Nov 2026 Web API /play to native Spotify apps is
@@ -13,11 +13,12 @@ const SECONDS_MIN = 1;
 const SECONDS_MAX = 3;
 const DEFAULTS = { seconds: 3, beeps: true, service: 'spotify' };
 
-// Where a card's song opens. YouTube Music links autoplay on iPhone (2026-11-08); on Android the
-// app opens but waited for a tap (2026-11-16, with music-video IDs; song IDs not yet retried).
+// Where a card's song opens. YouTube: youtube.com/watch opens the regular YouTube app and plays by
+// itself on Android, tapped or after 3 s (2026-11-17). Not music.youtube.com: Android Firefox opens
+// that as a browser tab, and it needs the separate YouTube Music app, which players don't have.
 const SERVICES = {
   spotify: { name: 'Spotify', link: (id) => 'spotify:track:' + id },
-  youtube: { name: 'YouTube Music', link: (id) => 'https://music.youtube.com/watch?v=' + id },
+  youtube: { name: 'YouTube', link: (id) => 'https://www.youtube.com/watch?v=' + id },
 };
 const SETTINGS_KEY = 'songscan.settings';
 // QR fallback for browsers without BarcodeDetector. Pinned + SRI; only loaded when needed.

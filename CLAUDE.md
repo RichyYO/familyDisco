@@ -16,7 +16,7 @@ Dropped 2026-11-09 (Red): YouTube Music + iPhone Shortcut. Spotify only; SHORTCU
 `youtube` column deleted (git history has them). Every card now needs a Spotify ID.
 Parked: in-app reveal, catalog updates, offline, scoring, public release.
 
-YouTube Music is back (2026-11-11) as a per-phone setting, for players with YouTube Premium.
+YouTube is back (2026-11-11) as a per-phone setting, for players with YouTube Premium.
 Real deck `main` comes later; keep using `test` until then.
 
 ## Decisions (beyond the spec)
@@ -26,7 +26,9 @@ Real deck `main` comes later; keep using `test` until then.
   3 s is the longest confirmed on a phone. Beeps off creates no AudioContext at all.
 - Service is per phone (Red, 2026-11-11), not per deck or a second page: one printed deck serves
   both. Spotify ID stays required on every card; `youtube` is optional and the generator lists
-  cards without one. YouTube plays by opening `https://music.youtube.com/watch?v=<id>`.
+  cards without one. YouTube plays by opening `https://www.youtube.com/watch?v=<id>` in the
+  regular YouTube app (Red, 2026-11-17). Not music.youtube.com: players don't have the separate
+  YouTube Music app (the intent link prompts its install), and Firefox opens the plain link as a tab.
 - Blank CSV card numbers are assigned and written back into the CSV, so reruns never renumber printed cards.
 - Generator errors (not warns) on glyphs the card font lacks; font = Windows Arial.
 - Print layout: A4, 3×4 grid of 60 mm cards, backs mirrored for long-edge duplex.
@@ -56,6 +58,9 @@ Real deck `main` comes later; keep using `test` until then.
   why it lands on Video; the song (Art Track) ID is a different ID. test.csv now has song IDs
   (music.youtube.com search → Songs filter); all 10 open on the Song tab in the PC web player, the
   old video ID on Video. Phone retest pending.
+- 2026-11-17 Android (Firefox 160), link test page: plain music.youtube.com (song, video, radio
+  queue) now all open a browser tab. Intent pinned to the YTM app and youtube.com/watch play by
+  themselves, both tapped and after 3 s. youtu.be and vnd.youtube: "other". Delay isn't the issue.
 
 ## Architecture
 - tools/make_cards.py: CSV → decks/<deck>.json (IDs only) + print/cards-<deck>.pdf. Validates all
@@ -69,8 +74,5 @@ Real deck `main` comes later; keep using `test` until then.
 ## Known issues / untested (needs a real phone)
 - Untested: iPhone Safari with the page, BarcodeDetector path, Spotify Free accounts.
 - Untested on a phone: settings screen.
-- YouTube Music on Android didn't autoplay (2026-11-16, video IDs). Retest with the song IDs;
-  if it still waits for a tap, that's the cost of the link (no YTM API to start playback).
-  ytm-test.html (throwaway) tries 7 link forms, direct tap vs after 3 s, for the phone retest;
-  put the winner in SERVICES.youtube, then delete the page. Fallback if none autoplay: in-page
-  YouTube embed (ads with Premium and embed blocks unverified).
+- Untested on a phone: YouTube from the real game flow (only the test page was tried), and
+  youtube.com/watch on iPhone.

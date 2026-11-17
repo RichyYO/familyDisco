@@ -5,8 +5,8 @@
 
 CSV columns: card,title,artist,year,spotify,youtube
 - spotify takes a track share link, a spotify:track: URI or a bare 22-char ID. Required.
-- youtube takes a YouTube / YouTube Music video link or a bare 11-char video ID. May be
-  blank: that card then can't play on a phone set to YouTube Music (the run lists them).
+- youtube takes a YouTube or YouTube Music link or a bare 11-char video ID. May be
+  blank: that card then can't play on a phone set to YouTube (the run lists them).
   The column itself may be missing (older CSVs); it is then added, blank, on write-back.
 - Blank card numbers are assigned (next free number) and WRITTEN BACK to the CSV,
   so a later run can never renumber an already-printed card.
@@ -290,7 +290,7 @@ def main() -> int:
 
     no_yt = [r["card"] for r in rows if not r["youtube"]]
     if no_yt:
-        print(f"No YouTube ID (can't play on a phone set to YouTube Music): {', '.join(no_yt)}")
+        print(f"No YouTube ID (can't play on a phone set to YouTube): {', '.join(no_yt)}")
     for col, name in (("spotify", "Spotify"), ("youtube", "YouTube")):
         by_id: dict[str, list[str]] = {}
         for r in rows:
