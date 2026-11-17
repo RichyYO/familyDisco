@@ -71,3 +71,6 @@ Real deck `main` comes later; keep using `test` until then.
 - Untested on a phone: settings screen.
 - YouTube Music on Android didn't autoplay (2026-11-16, video IDs). Retest with the song IDs;
   if it still waits for a tap, that's the cost of the link (no YTM API to start playback).
+  ytm-test.html (throwaway) tries 7 link forms, direct tap vs after 3 s, for the phone retest;
+  put the winner in SERVICES.youtube, then delete the page. Fallback if none autoplay: in-page
+  YouTube embed (ads with Premium and embed blocks unverified).
